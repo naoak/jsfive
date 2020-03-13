@@ -20,13 +20,8 @@
     "url": "https://github.com/usnistgov/jsfive/issues"
   },
   "homepage": "https://github.com/usnistgov/jsfive#readme",
-  "dependencies": {
-    "pako-es": "^1.0.9"
-  },
-  "devDependencies": {
-    "@pika/web": "^0.4.1",
-    "parcel": "^1.12.3"
-  },
+  "dependencies": {},
+  "devDependencies": {},
   "scripts": {
     "build": "parcel build index.js -o hdf5.js",
     "test": "echo \"Error: no test specified\" && exit 1"
