@@ -4,9 +4,6 @@
   "description": "A pure javascript HDF5 file reader, based on pyfive",
   "main": "index.js",
   "module": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/usnistgov/jsfive.git"
@@ -31,6 +28,7 @@
     "parcel": "^1.12.3"
   },
   "scripts": {
-    "build": "parcel build index.js -o hdf5.js"
+    "build": "parcel build index.js -o hdf5.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   }
 }
