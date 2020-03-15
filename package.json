@@ -35,6 +35,7 @@
   },
   "scripts": {
     "build": "rollup -c",
+    "demo": "python -m SimpleHTTPServer 8888",
     "test": "echo \"Error: no test specified\" && exit 1"
   }
 }

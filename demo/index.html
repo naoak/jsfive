@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,minimum-scale=1,initial-scale=1,user-scalable=no">
+  <title>hdf5.js Demo</title>
+  <!--
+  <script src="https://cdn.jsdelivr.net/gh/usnistgov/jsfive@master/dist/hdf5.js"></script>
+  -->
+  <script src="../dist/hdf5.js"></script>
+
+  <script>
+    (async () => {
+      const origin = 'https://ncnr.nist.gov';
+      const path = '/pub/ncnrdata/ng7sans/201911/nonims83/data/';
+      const filename = 'sans102051.nxs.ng7';
+      const file_url = origin + path + filename;
+      const response = await fetch(file_url);
+      const buffer = await response.arrayBuffer();
+      const f = new hdf5.File(buffer, file_url);
+      // do something with f;
+      console.log(f);
+      let e = f.get('entry');
+      let c = f.get('entry/collection_time');
+      let d = f.get('entry/definition');
+      console.log(e, c, d);
+
+      console.log(d.value);
+      console.log(d.attrs);
+
+      const ed = e.get('definition');
+      console.log(ed.value);
+
+      /*
+      let g = f.get('group');
+      let d = f.get('group/dataset');
+      let v = d.value;
+      let a = d.attrs;
+      console.log(g, d, v, a);
+      */
+    })();
+  </script>
+</head>
+<body>
+</body>
