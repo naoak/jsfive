@@ -1,12 +1,14 @@
-import {_unpack_struct_from, _structure_size, struct, dtype_getter, DataView64} from './core.js';
+import {_unpack_struct_from, _structure_size, struct, dtype_getter, DataView64} from './core';
 import pako from 'pako';
 
 const zlib = {
-  decompress: function(buf) {
-    let input_array = new Uint8Array(buf);
+  decompress: function(buf: Iterable<number>) {
+    const input_array = new Uint8Array(buf);
     return pako.inflate(input_array).buffer;
-    }
+  }
 };
+
+export type Node = Map<string, any>;
 
 export class BTree {
   /*
@@ -14,17 +16,17 @@ export class BTree {
   HDF5 version 1 B-Tree.
   """
   */
-  constructor(fh, offset) {
-    //""" initalize. """
-    this.fh = fh;
+  root_node: Node;
+  all_nodes: Map<number, Node[]>;
 
+  constructor(public fh: ArrayBufferLike, offset: number) {
     //# read in the root node
     let root_node = this._read_node(offset);
     this.root_node = root_node;
 
     //# read in all nodes
-    var all_nodes = new Map();
-    var node_level = root_node.get('node_level');
+    const all_nodes = new Map<number, Node[]>();
+    let node_level = root_node.get('node_level');
     all_nodes.set(node_level, [root_node]);
     while (node_level != 0) {
       var new_nodes = [];
@@ -40,7 +42,7 @@ export class BTree {
     this.all_nodes = all_nodes
   }
 
-  _read_node(offset) {
+  _read_node(offset: number) {
     //""" Return a single node in the B-Tree located at a given offset. """
     //this.fh.seek(offset);
     let node = _unpack_struct_from(B_LINK_NODE_V1, this.fh, offset);
@@ -79,8 +81,10 @@ export class BTreeRawDataChunks {
   /*
   HDF5 version 1 B-Tree storing raw data chunk nodes (type 1).
   */
+  root_node: Node;
+  all_nodes: Map<number, Node[]>;
 
-  constructor(fh, offset, dims) {
+  constructor(public fh: ArrayBufferLike, offset: number, public dims: number) {
     //""" initalize. """
     this.fh = fh;
     this.dims = dims;
@@ -90,7 +94,7 @@ export class BTreeRawDataChunks {
     this.root_node = root_node;
 
     //# read in all other nodes
-    var all_nodes = {}
+    const all_nodes = new Map<number, Node[]>();
     var node_level = root_node.get('node_level');
     all_nodes[node_level] = [root_node];
     while (node_level != 0) {
@@ -142,19 +146,18 @@ export class BTreeRawDataChunks {
     return node
   }
 
-  construct_data_from_chunks(chunk_shape, data_shape, dtype, filter_pipeline) {
+  construct_data_from_chunks(chunk_shape, data_shape, dtype: string | string[], filter_pipeline) {
     //""" Build a complete data array from chunks. """
-    var true_dtype;
     var item_getter, item_big_endian, item_size;
     if (dtype instanceof Array) {
-      true_dtype = dtype;
+      const true_dtype = dtype;
       let dtype_class = dtype[0];
       if (dtype_class == 'REFERENCE') {
-        let size = dtype[1];
+        let size = parseInt(dtype[1], 10);
         if (size != 8) {
           throw "NotImplementedError('Unsupported Reference type')";
         }
-        var dtype = '<u8';
+        // var dtype = '<u8';
         item_getter = 'getUint64';
         item_big_endian = false;
         item_size = 8;
@@ -169,7 +172,7 @@ export class BTreeRawDataChunks {
       }
     }
     else {
-      true_dtype = null;
+      const true_dtype = null;
       [item_getter, item_big_endian, item_size] = dtype_getter(dtype);
     }
 

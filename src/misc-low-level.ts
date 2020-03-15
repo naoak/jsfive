@@ -1,9 +1,16 @@
-import {_structure_size, _padded_size, _unpack_struct_from, struct, assert} from './core.js';
+import {_structure_size, _padded_size, _unpack_struct_from, struct, assert} from './core';
+import type { Node } from './btree';
 
 export class SuperBlock {
-  constructor(fh, offset) {
-    let version_hint = struct.unpack_from('<B', fh, offset + 8);
-    var contents;
+  version: number;
+  _end_of_sblock: number;
+  _contents: Map<string, any>;
+  _fh: ArrayBufferLike;
+  _root_symbol_table: SymbolTable;
+
+  constructor(fh: ArrayBufferLike, offset: number) {
+    let version_hint: number = struct.unpack_from('<B', fh, offset + 8)[0];
+    let contents: Map<string, any>;
     if (version_hint == 0) {
       contents = _unpack_struct_from(SUPERBLOCK_V0, fh, offset);
       this._end_of_sblock = offset + SUPERBLOCK_V0_SIZE;
@@ -29,7 +36,7 @@ export class SuperBlock {
   get offset_to_dataobjects() {
     //""" The offset to the data objects collection for the superblock. """
     if (this.version == 0) {
-      var sym_table = new SymbolTable(this._fh, this._end_of_sblock, true);
+      let sym_table = new SymbolTable(this._fh, this._end_of_sblock, true);
       this._root_symbol_table = sym_table
       return sym_table.group_offset;
     }
@@ -48,7 +55,10 @@ export class Heap {
   HDF5 local heap.
   """
   */
-  constructor(fh, offset) {
+  _contents: Map<string, any>;
+  data: ArrayBuffer;
+
+  constructor(fh: ArrayBufferLike, offset: number) {
     //""" initalize. """
 
     //fh.seek(offset)
@@ -77,9 +87,13 @@ export class SymbolTable {
   HDF5 Symbol Table.
   """
   */
-  constructor(fh, offset, root=false) {
+  group_offset: number;
+  entries: Map<string, any>[];
+  _contents: Node;
+
+  constructor(fh: ArrayBufferLike, offset: number, root=false) {
     //""" initialize, root=True for the root group, False otherwise. """
-    var node;
+    let node: Node;
     if (root) {
       //# The root symbol table has no Symbol table node header
       //# and contains only a single entry
@@ -90,7 +104,7 @@ export class SymbolTable {
       if (node.get('signature') != 'SNOD') { throw "incorrect node type" }
       offset += SYMBOL_TABLE_NODE_SIZE;
     }  
-    var entries = [];
+    let entries: Map<string, any>[] = [];
     var n_symbols = node.get('symbols');
     for (var i=0; i<n_symbols; i++) {
       entries.push(_unpack_struct_from(SYMBOL_TABLE_ENTRY, fh, offset))
@@ -114,7 +128,7 @@ export class SymbolTable {
 
   get_links() {
     //""" Return a dictionary of links (dataset/group) and offsets. """
-    var links = {}
+    let links: {[key: string]: number} = {}
     this.entries.forEach(function(e) {
       links[e.get('link_name')] = e.get('object_header_address');
     });
@@ -126,7 +140,11 @@ export class GlobalHeap {
   /*
   HDF5 Global Heap collection.
   */
-  constructor(fh, offset) {
+  heap_data: ArrayBuffer;
+  _header: Map<string, any>;
+  _objects: Map<number, ArrayBuffer>;
+
+  constructor(fh: ArrayBufferLike, offset: number) {
     let header = _unpack_struct_from(GLOBAL_HEAP_HEADER, fh, offset);
     offset += GLOBAL_HEAP_HEADER_SIZE;
     //assert(header.get('signature') == 'GCOL');
@@ -144,7 +162,7 @@ export class GlobalHeap {
     //""" Dictionary of objects in the heap. """
     if (this._objects == null) {
       this._objects = new Map();
-      var offset = 0;
+      let offset = 0;
       while (offset <= this.heap_data.byteLength - GLOBAL_HEAP_OBJECT_SIZE) {
         let info = _unpack_struct_from(
           GLOBAL_HEAP_OBJECT, this.heap_data, offset);

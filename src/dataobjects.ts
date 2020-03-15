@@ -1,7 +1,7 @@
-import {DatatypeMessage} from './datatype-msg.js';
-import {_structure_size, _padded_size, _unpack_struct_from, struct, dtype_getter, DataView64, assert} from './core.js';
-import {BTree, BTreeRawDataChunks, GZIP_DEFLATE_FILTER, SHUFFLE_FILTER, FLETCH32_FILTER} from './btree.js';
-import {Heap, SymbolTable, GlobalHeap} from './misc-low-level.js';
+import {DatatypeMessage} from './datatype-msg';
+import {_structure_size, _padded_size, _unpack_struct_from, struct, dtype_getter, DataView64, assert} from './core';
+import {BTree, BTreeRawDataChunks, GZIP_DEFLATE_FILTER, SHUFFLE_FILTER, FLETCH32_FILTER} from './btree';
+import {Heap, SymbolTable, GlobalHeap} from './misc-low-level';
 
 export class DataObjects {
   /*
@@ -9,7 +9,17 @@ export class DataObjects {
   HDF5 DataObjects.
   """
   */
-  constructor(fh, offset) {
+  msgs: Map<string, any>[];
+  msg_data: ArrayBuffer;
+  _header: Map<string, any>;
+  _global_heaps: Map<number, GlobalHeap>;
+  _filter_pipeline: Map<string, any>[]
+  _chunk_params_set : boolean;
+  _chunks: number[];
+  _chunk_dims: number;
+  _chunk_address: number;
+
+  constructor(public fh: ArrayBufferLike, public offset: number) {
     //""" initalize. """
     //fh.seek(offset)
     let version_hint = struct.unpack_from('<B', fh, offset)[0]
@@ -23,11 +33,9 @@ export class DataObjects {
     else {
         throw "InvalidHDF5File('unknown Data Object Header')";
     }
-    this.fh = fh
     this.msgs = msgs
     this.msg_data = msg_data
-    this.offset = offset
-    this._global_heaps = {}
+    this._global_heaps = new Map();
     this._header = header
 
     //# cached attributes
@@ -37,6 +45,7 @@ export class DataObjects {
     this._chunk_dims = null;
     this._chunk_address = null;
   }
+
   get dtype() {
     //""" Datatype of the dataset. """
     let msg = this.find_msg_type(DATATYPE_MSG_TYPE)[0];
@@ -78,7 +87,7 @@ export class DataObjects {
     let [res0, res1] = struct.unpack_from('<HI', this.fh, offset);
     offset += struct.calcsize('<HI');
 
-    var filters = []
+    const filters: Map<string, any>[] = []
     for (var _=0; _<nfilters; _++) {
 
       let filter_info = _unpack_struct_from(
@@ -106,16 +115,16 @@ export class DataObjects {
     return this._filter_pipeline;
   }
 
-  find_msg_type(msg_type) {
+  find_msg_type(msg_type: number) {
     //""" Return a list of all messages of a given type. """
     return this.msgs.filter(function(m) { return m.get('type') == msg_type });
   }
 
   get_attributes() {
     //""" Return a dictionary of all attributes. """
-    let attrs = {};
+    let attrs: {[key: string]: any[]} = {};
     let attr_msgs = this.find_msg_type(ATTRIBUTE_MSG_TYPE);
-    for (var msg of attr_msgs) {
+    for (let msg of attr_msgs) {
       let offset = msg.get('offset_to_message');
       let [name, value] = this.unpack_attribute(offset);
       attrs[name] = value;
@@ -153,7 +162,7 @@ export class DataObjects {
     }
 
     if (size) {
-      let [getter, big_endian, size] = dtype_getter(this.dtype);
+      let [getter, big_endian, size] = dtype_getter(this.dtype as string);
       let payload_view = new DataView64(this.fh);
       fillvalue = payload_view[getter](offset, !big_endian, size);
     }
@@ -163,13 +172,14 @@ export class DataObjects {
     return fillvalue
   }
 
-  unpack_attribute(offset) {
+  unpack_attribute(offset: number): [string, any[]] {
     //""" Return the attribute name and value. """
 
     //# read in the attribute message header
     //# See section IV.A.2.m. The Attribute Message for details
-    let version = struct.unpack_from('<B', this.fh, offset)[0];
-    var attr_map, padding_multiple;
+    let version: number = struct.unpack_from('<B', this.fh, offset)[0];
+    let attr_map: Map<string, any>;
+    var padding_multiple;
     if (version == 1) {
       attr_map = _unpack_struct_from(
           ATTR_MSG_HEADER_V1, this.fh, offset);
@@ -189,8 +199,8 @@ export class DataObjects {
     }
 
     //# read in the attribute name
-    let name_size = attr_map.get('name_size');
-    let name = struct.unpack_from('<' + name_size.toFixed() + 's', this.fh, offset)[0];
+    let name_size: number = attr_map.get('name_size');
+    let name: string = struct.unpack_from('<' + name_size.toFixed() + 's', this.fh, offset)[0];
     name = name.replace(/\x00$/, '');
     //name = name.strip(b'\x00').decode('utf-8')
     offset += _padded_size(name_size, padding_multiple);
@@ -307,33 +317,33 @@ export class DataObjects {
     //# global heap of the HDF5 file. Global heap identifiers are
     //# stored in the data object storage.
     let gheap_id = _unpack_struct_from(GLOBAL_HEAP_ID, buf, offset+4)
-    let gheap_address = gheap_id.get('collection_address');
+    let gheap_address: number = gheap_id.get('collection_address');
     assert(gheap_id.get("collection_address") < Number.MAX_SAFE_INTEGER);
-    var gheap;
+    let gheap: GlobalHeap;
     if (!(gheap_address in this._global_heaps)) {
       //# load the global heap and cache the instance
       gheap = new GlobalHeap(this.fh, gheap_address);
-      this._global_heaps[gheap_address] = gheap;
+      this._global_heaps.set(gheap_address, gheap);
     }
-    gheap = this._global_heaps[gheap_address];
+    gheap = this._global_heaps.get(gheap_address);
     let vlen_data = gheap.objects.get(gheap_id.get('object_index'));
     return [vlen_size, vlen_data];
   }
 
-  _parse_v1_objects(buf, offset) {
+  _parse_v1_objects(buf: ArrayBufferLike, offset: number): [Map<string, any>[], ArrayBuffer, Map<string, any>] {
     //""" Parse a collection of version 1 Data Objects. """
     let header = _unpack_struct_from(OBJECT_HEADER_V1, buf, offset)
     assert(header.get('version') == 1);
-    let total_header_messages = header.get('total_header_messages');
+    let total_header_messages: number = header.get('total_header_messages');
 
-    var block_size = header.get('object_header_size');
-    var block_offset = offset + _structure_size(OBJECT_HEADER_V1);
-    var msg_data = buf.slice(block_offset, block_offset + block_size);
-    var object_header_blocks = [[block_offset, block_size]];
-    var current_block = 0;
-    var local_offset = 0;
-    var msgs = new Array(total_header_messages);
-    for (var i=0; i<total_header_messages; i++) {
+    let block_size: number = header.get('object_header_size');
+    let block_offset: number = offset + _structure_size(OBJECT_HEADER_V1);
+    let msg_data = buf.slice(block_offset, block_offset + block_size);
+    let object_header_blocks: [number, number][] = [[block_offset, block_size]];
+    let current_block = 0;
+    let local_offset = 0;
+    let msgs: Map<string, any>[] = new Array(total_header_messages);
+    for (let i=0; i<total_header_messages; i++) {
       if (local_offset >= block_size) {
         [block_offset, block_size] = object_header_blocks[++current_block];
         local_offset = 0;
@@ -351,14 +361,14 @@ export class DataObjects {
     return [msgs, msg_data, header];
   }
 
-  _parse_v2_objects(buf, offset) {
+  _parse_v2_objects(buf: ArrayBufferLike, offset: number): [Map<string, any>[], ArrayBuffer, Map<string, any>] {
     /* Parse a collection of version 2 Data Objects. */
 
-    var [header, creation_order_size, block_offset] = this._parse_v2_header(buf, offset);
+    let [header, creation_order_size, block_offset] = this._parse_v2_header(buf, offset);
     offset = block_offset;
-    var msgs = [];
-    var block_size = header.get('size_of_chunk_0');
-    var msg_data = buf.slice(offset, offset += block_size);
+    const msgs: Map<string, any>[] = [];
+    let block_size: number = header.get('size_of_chunk_0');
+    const msg_data = buf.slice(offset, offset += block_size);
 
     var object_header_blocks = [[block_offset, block_size]];
     var current_block = 0;
@@ -387,10 +397,10 @@ export class DataObjects {
     return [msgs, msg_data, header];
   }
 
-  _parse_v2_header(buf, offset) {
+  _parse_v2_header(buf: ArrayBufferLike, offset: number): [Map<string, any>, number, number] {
     /* Parse a version 2 data object header. */
     let header = _unpack_struct_from(OBJECT_HEADER_V2, buf, offset);
-    var creation_order_size;
+    let creation_order_size: number;
     offset += _structure_size(OBJECT_HEADER_V2);
     assert(header.get('version') == 2);
     if (header.get('flags') & 0b00000100) {
@@ -401,7 +411,7 @@ export class DataObjects {
     }
     assert((header.get('flags') & 0b00010000) == 0);
     if (header.get('flags') & 0b00100000) {
-      let times = struct.unpack_from('<4I', buf, offset);
+      let times: number[] = struct.unpack_from('<4I', buf, offset);
       offset += 16;
       header.set('access_time', times[0]);
       header.set('modification_time', times[1]);
@@ -431,14 +441,14 @@ export class DataObjects {
       SYMBOL_TABLE_MSG, this.fh,
       sym_tbl_msgs[0].get('offset_to_message'));
 
-    var btree = new BTree(this.fh, symbol_table_message.get('btree_address'));
-    var heap = new Heap(this.fh, symbol_table_message.get('heap_address'));
-    var links = {};
-    for (var symbol_table_address of btree.symbol_table_addresses()) {
+    const btree = new BTree(this.fh, symbol_table_message.get('btree_address'));
+    const heap = new Heap(this.fh, symbol_table_message.get('heap_address'));
+    let links: {[key: string]: number} = {};
+    for (let symbol_table_address of btree.symbol_table_addresses()) {
       let table = new SymbolTable(this.fh, symbol_table_address);
       table.assign_name(heap);
       let new_links = table.get_links();
-      for (var lk in new_links) {
+      for (let lk in new_links) {
         links[lk] = new_links[lk];
       }
       //links.update(table.get_links())
@@ -448,11 +458,11 @@ export class DataObjects {
 
   _get_links_from_link_msgs() {
     //""" Retrieve links from link messages. """
-    var links = {}
-    var link_msgs = this.find_msg_type(LINK_MSG_TYPE);
-    for (var link_msg of link_msgs) {
-      let offset = link_msg.get('offset_to_message');
-      var [version, flags] = struct.unpack_from('<BB', this.fh, offset);
+    const links: {[key: string]: number} = {}
+    const link_msgs = this.find_msg_type(LINK_MSG_TYPE);
+    for (let link_msg of link_msgs) {
+      let offset: number = link_msg.get('offset_to_message');
+      let [version, flags] = struct.unpack_from('<BB', this.fh, offset) as [number, number];
       offset += 2
       assert(version == 1);
       assert((flags & 0b00000001) == 0);
@@ -469,10 +479,10 @@ export class DataObjects {
       let name_size = struct.unpack_from('<B', this.fh, offset)[0];
       offset += 1;
       //let name = this.fh.slice(offset, offset + name_size).decode(encoding)
-      let name = struct.unpack_from('<' + name_size.toFixed() + 's', this.fh, offset);
+      let name: string = struct.unpack_from('<' + name_size.toFixed() + 's', this.fh, offset)[0];
       offset += name_size;
 
-      let address = struct.unpack_from('<Q', this.fh, offset)[0];
+      let address: number = struct.unpack_from('<Q', this.fh, offset)[0];
       links[name] = address;
     }
     return links
@@ -580,10 +590,10 @@ export class DataObjects {
         if (!(gheap_address in this._global_heaps)) {
           //# load the global heap and cache the instance
           gheap = new GlobalHeap(this.fh, gheap_address);
-          this._global_heaps[gheap_address] = gheap;
+          this._global_heaps.set(gheap_address, gheap);
         }
         else {
-          gheap = this._global_heaps[gheap_address];
+          gheap = this._global_heaps.get(gheap_address);
         }
         let vlen_data = gheap.objects.get(object_index);
         if (dtype_class == 'VLEN_STRING') {
@@ -614,39 +624,39 @@ export class DataObjects {
       return
     }
     this._chunk_params_set = true;
-    var msg = this.find_msg_type(DATA_STORAGE_MSG_TYPE)[0];
-    var offset = msg.get('offset_to_message');
-    var [version, dims, layout_class, property_offset] = (
+    const msg = this.find_msg_type(DATA_STORAGE_MSG_TYPE)[0];
+    const offset: number = msg.get('offset_to_message');
+    let [version, dims, layout_class, property_offset] = (
         this._get_data_message_properties(offset));
 
     if (layout_class != 2) { //# not chunked storage
       return
     }
 
-    var data_offset;
+    let data_offset: number;
     if ((version == 1) || (version == 2)) {
       var address = struct.unpack_from('<Q', this.fh, property_offset)[0];
       data_offset = property_offset + struct.calcsize('<Q');
     }
     else if (version == 3) {
-      var [dims, address] = struct.unpack_from(
+      [dims, address] = struct.unpack_from(
             '<BQ', this.fh, property_offset);
       data_offset = property_offset + struct.calcsize('<BQ');
     }
     assert((version >= 1) && (version <= 3));
 
-    var fmt = '<' + (dims-1).toFixed() + 'I';
-    var chunk_shape = struct.unpack_from(fmt, this.fh, data_offset);
+    const fmt = '<' + (dims-1).toFixed() + 'I';
+    const chunk_shape: number[] = struct.unpack_from(fmt, this.fh, data_offset);
     this._chunks = chunk_shape;
     this._chunk_dims = dims;
     this._chunk_address = address;
     return
   }
 
-  _get_data_message_properties(msg_offset) {
+  _get_data_message_properties(msg_offset: number): [number, number, number, number] {
     //""" Return the message properties of the DataObject. """
-    var [dims, layout_class, property_offset] = [null, null, null];
-    var [version, arg1, arg2] = struct.unpack_from('<BBB', this.fh, msg_offset);
+    let [dims, layout_class, property_offset]: [number, number, number] = [null, null, null];
+    let [version, arg1, arg2] = struct.unpack_from('<BBB', this.fh, msg_offset) as [number, number, number];
     if ((version == 1) || (version == 2)) {
       dims = arg1;
       layout_class = arg2;

@@ -4,7 +4,7 @@ import typescript from '@rollup/plugin-typescript';
 import { terser } from 'rollup-plugin-terser';
 
 module.exports = {
-  input: 'esm/high-level.js',
+  input: 'src/high-level.ts',
   output: {
     file: 'dist/hdf5.js',
     format: 'umd',

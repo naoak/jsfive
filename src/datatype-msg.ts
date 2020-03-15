@@ -1,15 +1,15 @@
-import {_structure_size, _unpack_struct_from} from './core.js';
+import {_structure_size, _unpack_struct_from} from './core';
 
 export class DatatypeMessage {
   //""" Representation of a HDF5 Datatype Message. """
   //# Contents and layout defined in IV.A.2.d.
+  dtype: string | any[];
 
-  constructor(buf, offset) {
-    this.buf = buf;
-    this.offset = offset;
+  constructor(public buf: ArrayBufferLike, public offset: number) {
     this.dtype = this.determine_dtype();
   }
-  determine_dtype() {
+
+  determine_dtype(): string | any[] {
     //""" Return the dtype (often numpy-like) for the datatype message.  """
     let datatype_msg = _unpack_struct_from(DATATYPE_MSG, this.buf, this.offset);
     this.offset += DATATYPE_MSG_SIZE
@@ -50,9 +50,11 @@ export class DatatypeMessage {
       let vlen_type = this._determine_dtype_vlen(datatype_msg);
       if (vlen_type[0] == 'VLEN_SEQUENCE') {
         let base_type = this.determine_dtype();
-        vlen_type = ['VLEN_SEQUENCE', base_type];
+        return ['VLEN_SEQUENCE', base_type];
       }
-      return vlen_type
+      else {
+        return vlen_type
+      }
     }
     else {
       throw 'Invalid datatype class ' + datatype_class;
@@ -62,13 +64,13 @@ export class DatatypeMessage {
   _determine_dtype_fixed_point(datatype_msg) {
     //""" Return the NumPy dtype for a fixed point class. """
     //# fixed-point types are assumed to follow IEEE standard format
-    let length_in_bytes = datatype_msg.get('size');
+    let length_in_bytes: number = datatype_msg.get('size');
     if (!([1, 2, 4, 8].includes(length_in_bytes))) {
         throw "Unsupported datatype size";
     }
 
     let signed = datatype_msg.get('class_bit_field_0') & 0x08;
-    var dtype_char;
+    let dtype_char: string;
     if (signed > 0) {
       dtype_char = 'i';
     }
@@ -77,7 +79,7 @@ export class DatatypeMessage {
     }
 
     let byte_order = datatype_msg.get('class_bit_field_0') & 0x01;
-    var byte_order_char;
+    let byte_order_char: string;
     if (byte_order == 0) {
       byte_order_char = '<';  //# little-endian
     }
@@ -95,7 +97,7 @@ export class DatatypeMessage {
   _determine_dtype_floating_point(datatype_msg) {
     //""" Return the NumPy dtype for a floating point class. """
     //# Floating point types are assumed to follow IEEE standard formats
-    let length_in_bytes = datatype_msg.get('size');
+    let length_in_bytes: number = datatype_msg.get('size');
     if (!([1, 2, 4, 8].includes(length_in_bytes))) {
       throw "Unsupported datatype size";
     }
@@ -103,7 +105,7 @@ export class DatatypeMessage {
     let dtype_char = 'f'
 
     let byte_order = datatype_msg.get('class_bit_field_0') & 0x01;
-    var byte_order_char;
+    let byte_order_char: string;
     if (byte_order == 0) {
       byte_order_char = '<';  //# little-endian
     }
@@ -123,7 +125,7 @@ export class DatatypeMessage {
     return 'S' + datatype_msg.get('size').toFixed();
   }
   
-  _determine_dtype_vlen(datatype_msg) {
+  _determine_dtype_vlen(datatype_msg): [string, number, number] {
     //""" Return the dtype information for a variable length class. """
     let vlen_type = datatype_msg.get('class_bit_field_0') & 0x01;
     if (vlen_type != 1) {
@@ -133,7 +135,8 @@ export class DatatypeMessage {
     let character_set = datatype_msg.get('class_bit_field_1') & 0x01; 
     return ['VLEN_STRING', padding_type, character_set];
   }
-  _determine_dtype_compound(datatype_msg) {
+
+  _determine_dtype_compound(datatype_msg): any {
     throw "not yet implemented!";
   }
 }   

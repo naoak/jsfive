@@ -1,5 +1,5 @@
-import {DataObjects} from './dataobjects.js';
-import {SuperBlock} from './misc-low-level.js';
+import {DataObjects} from './dataobjects';
+import {SuperBlock} from './misc-low-level';
 
 export const __version__ = '0.4.0.dev';
 
@@ -17,10 +17,17 @@ export class Group {
     parent : Group
         Group instance containing this group.
   */
-  constructor(name, dataobjects, parent, getterProxy=false) {
+  parent: Group;
+  file: File;
+  _links: {[key: string]: number};
+  _dataobjects: DataObjects;
+  _attrs: {[key: string]: any[]};
+  _keys: string[];
+
+  constructor(public name: string, dataobjects: DataObjects, parent: Group, getterProxy=false) {
     if (parent == null) {
       this.parent = this;
-      this.file = this;
+      this.file = <unknown>this as File;
     }
     else {
       this.parent = parent;
@@ -82,12 +89,15 @@ export class Group {
       return this.file.get(path.slice(1));
     }
 
+    let next_obj: string;
+    let additional_obj: string;
+
     if (posix_dirname(path) != '') {
-      var [next_obj, additional_obj] = path.split(/\/(.*)/);
+      [next_obj, additional_obj] = path.split(/\/(.*)/);
     }
     else {
-      var next_obj = path;
-      var additional_obj = '.'
+      next_obj = path;
+      additional_obj = '.'
     }
     if (!(next_obj in this._links)) {
       throw next_obj + ' not found in group';
@@ -189,8 +199,12 @@ export class File extends Group {
   userblock_size : int
       Size of the user block in bytes (currently always 0).
   */
+  filename: string;
+  mode: 'r';
+  userblock_size: number;
+  _fh: ArrayBufferLike;
 
-  constructor (fh, filename) {
+  constructor (fh: ArrayBufferLike, filename: string = '') {
     //""" initalize. """
     //if hasattr(filename, 'read'):
     //    if not hasattr(filename, 'seek'):
@@ -204,14 +218,14 @@ export class File extends Group {
     this.parent = this;
 
     this._fh = fh
-    this.filename = filename || '';
+    this.filename = filename;
 
     this.file = this;
     this.mode = 'r';
     this.userblock_size = 0;
   }
 
-  _get_object_by_address(obj_addr) {
+  _get_object_by_address(obj_addr: number) {
     //""" Return the object pointed to by a given address. """
     if (this._dataobjects.offset == obj_addr) {
       return this
@@ -263,8 +277,14 @@ export class Dataset extends Array {
   parent : Group
       Group instance containing this dataset.
   */
+  parent: Group;
+  file: File;
+  name: string;
+  _dataobjects: DataObjects;
+  _attrs: null;
+  _astype: null;
 
-  constructor(name, dataobjects, parent) {
+  constructor(name: string, dataobjects: DataObjects, parent: Group) {
     //""" initalize. """
     super();
     this.parent = parent;
@@ -281,7 +301,7 @@ export class Dataset extends Array {
     if (this._astype == null) {
       return data
     }
-    return data.astype(this._astype);
+    // return data.astype(this._astype);
   }
 
   get shape() {

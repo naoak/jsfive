@@ -1,46 +1,47 @@
-export function _unpack_struct_from(structure, buf, offset=0) {
-  var fmt = '<' + Array.from(structure.values()).join('');
-  var values = struct.unpack_from(fmt, buf, offset);
-  var keys = Array.from(structure.keys());
-  var output = new Map();
+export function _unpack_struct_from<V>(structure: Map<string, V>, buf: ArrayBuffer | SharedArrayBuffer, offset=0) {
+  const fmt = '<' + Array.from(structure.values()).join('');
+  const values = struct.unpack_from(fmt, buf, offset);
+  const keys = Array.from(structure.keys());
+  const output = new Map<string, any>();
   for (var i=0; i<keys.length; i++) {
-      output.set(keys[i], values[i]);
+    output.set(keys[i], values[i]);
   }
   return output
 }
 
-export function assert(thing) {
+export function assert(thing: any) {
   if (!thing) {thing()}
 }
 
-export function _structure_size(structure) {
+export function _structure_size(structure: Map<any, any>) {
   //""" Return the size of a structure in bytes. """
   var fmt = '<' + Array.from(structure.values()).join('');
   return struct.calcsize(fmt);
 }
 
-export function _padded_size(size, padding_multiple=8) {
+export function _padded_size(size: number, padding_multiple=8) {
   //""" Return the size of a field padded to be a multiple a given value. """
   return (Math.ceil(size / padding_multiple) * padding_multiple);
 }
 
-var dtype_to_format = {
+const dtype_to_format = {
   "u": "Uint",
   "i": "Int",
   "f": "Float"
 }
 
-export function dtype_getter(dtype_str) {
-  var big_endian = struct._is_big_endian(dtype_str);
-  var getter, nbytes;
+export function dtype_getter(dtype_str: string): [string, boolean, number] {
+  let big_endian = struct._is_big_endian(dtype_str);
+  let getter: string;
+  let nbytes: number;
   if (/S/.test(dtype_str)) {
     // string type
     getter = "getString";
-    nbytes = ((dtype_str.match(/S(\d*)/) || [])[1] || 1) | 0;
+    nbytes = parseInt((dtype_str.match(/S(\d*)/) || [])[1] || '1', 10);
   }
   else {
     let [_, fstr, bytestr] = dtype_str.match(/[<>=!@]?(i|u|f)(\d*)/);
-    nbytes = parseInt(bytestr || 4, 10);
+    nbytes = parseInt(bytestr || '4', 10);
     let nbits = nbytes * 8;
     getter = "get" + dtype_to_format[fstr] + nbits.toFixed();
   }
@@ -54,9 +55,7 @@ export class Reference {
   HDF5 Reference.
   """
   */
-  constructor(address_of_reference) {
-      this.address_of_reference = address_of_reference;
-  }
+  constructor(public address_of_reference: any) {}
   
   __bool__() {
     return (this.address_of_reference != 0);
@@ -64,55 +63,58 @@ export class Reference {
 }
 
 class Struct {
-  constructor() {
-    this.big_endian = isBigEndian();
-    this.getters = {
-      "s": "getUint8",
-      "b": "getInt8",
-      "B": "getUint8",
-      "h": "getInt16",
-      "H": "getUint16",
-      "i": "getInt32",
-      "I": "getUint32",
-      "l": "getInt32",
-      "L": "getUint32",
-      "q": "getInt64",
-      "Q": "getUint64",
-      "f": "getFloat32",
-      "d": "getFloat64"
-    }
-    this.byte_lengths = {
-      "s": 1,
-      "b": 1,
-      "B": 1,
-      "h": 2,
-      "H": 2,
-      "i": 4,
-      "I": 4,
-      "l": 4,
-      "L": 4,
-      "q": 8,
-      "Q": 8,
-      "f": 4,
-      "d": 8
-    }
-    let all_formats = Object.keys(this.byte_lengths).join('');
-    this.fmt_size_regex = '(\\d*)([' + all_formats + '])';
+  big_endian = isBigEndian(); 
+
+  getters = {
+    "s": "getUint8",
+    "b": "getInt8",
+    "B": "getUint8",
+    "h": "getInt16",
+    "H": "getUint16",
+    "i": "getInt32",
+    "I": "getUint32",
+    "l": "getInt32",
+    "L": "getUint32",
+    "q": "getInt64",
+    "Q": "getUint64",
+    "f": "getFloat32",
+    "d": "getFloat64"
   }
-  calcsize(fmt) {
-    var size = 0;
-    var match;
-    var regex = new RegExp(this.fmt_size_regex, 'g');
+
+  byte_lengths = {
+    "s": 1,
+    "b": 1,
+    "B": 1,
+    "h": 2,
+    "H": 2,
+    "i": 4,
+    "I": 4,
+    "l": 4,
+    "L": 4,
+    "q": 8,
+    "Q": 8,
+    "f": 4,
+    "d": 8
+  }
+
+  fmt_size_regex = '(\\d*)([' + Object.keys(this.byte_lengths).join('') + '])';
+
+  calcsize(fmt: string) {
+    let size = 0;
+    let match: RegExpExecArray;
+    const regex = new RegExp(this.fmt_size_regex, 'g');
+    const m = regex.exec('');
     while ((match = regex.exec(fmt)) !== null) {
-      let n = parseInt(match[1] || 1, 10);
-      let f = match[2];
-      let subsize = this.byte_lengths[f];
+      const n = parseInt(match[1] || '1', 10);
+      const f = match[2];
+      const subsize = this.byte_lengths[f];
       size += n * subsize;
     }
     return size; 
   }
-  _is_big_endian(fmt) {
-    var big_endian;
+
+  _is_big_endian(fmt: string) {
+    let big_endian: boolean;
     if (/^</.test(fmt)) {
       big_endian = false;
     }
@@ -124,18 +126,18 @@ class Struct {
     }
     return big_endian;
   }
-  unpack_from(fmt, buffer, offset) {
-    var offset = offset || 0;
-    var view = new DataView64(buffer, 0);
+
+  unpack_from(fmt: string, buffer: ArrayBuffer | SharedArrayBuffer, offset: number = 0) {
+    const view = new DataView64(buffer, 0);
     var output = [];
-    var big_endian = this._is_big_endian(fmt);
-    var match;
-    var regex = new RegExp(this.fmt_size_regex, 'g');
+    const big_endian = this._is_big_endian(fmt);
+    let match: RegExpExecArray;
+    const regex = new RegExp(this.fmt_size_regex, 'g');
     while ((match = regex.exec(fmt)) !== null) {
-      let n = parseInt(match[1] || 1, 10);
+      let n = parseInt(match[1] || '1', 10);
       let f = match[2];
       let getter = this.getters[f];
-      let size = this.byte_lengths[f];
+      const size = this.byte_lengths[f];
       var append_target;
       if (f == 's') {
         var sarray = new Array();
@@ -144,7 +146,7 @@ class Struct {
       else {
         append_target = output;
       }
-      for (var i=0; i<n; i++) {
+      for (let i=0; i<n; i++) {
         append_target.push(view[getter](offset, !big_endian));
         offset += size;
       }
@@ -164,7 +166,7 @@ function isBigEndian() {
   return !((view[0] = 1) & array[0]);
 }
 
-var WARN_OVERFLOW = false;
+const WARN_OVERFLOW = false;
 
 export class DataView64 extends DataView {
   getUint64(byteOffset, littleEndian) {
@@ -222,7 +224,8 @@ export class DataView64 extends DataView {
     return [item_size, collection_address, object_index];
   }
 
-  generate_getFixedString(length) {
+  /*
+  generate_getFixedString(length: number) {
     var getter = function(byteoffset, littleEndian) {
       var output = "";
       for (var i=0; i<length; i++) {
@@ -232,7 +235,7 @@ export class DataView64 extends DataView {
     }
     return getter.bind(this);
   }
-
+  */
 }
 
 function getUint64(dataview, byteOffset, littleEndian) {
@@ -249,9 +252,8 @@ function getUint64(dataview, byteOffset, littleEndian) {
   return combined;
 }
 
-var VLEN_ADDRESS = new Map([
+const VLEN_ADDRESS = new Map([
   ['item_size', 'I'],
   ['collection_address', 'Q'],  //# 8 byte addressing,
   ['object_index', 'I'],
 ]);
-
