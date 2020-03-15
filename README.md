@@ -4,7 +4,7 @@ jsfive is a library for reading (not writing, at the moment) HDF5 files using pu
 Not all features of HDF5 are supported, but some key ones that are:
 
 * data chunking
-* data compression, if javascript zlib is provided (like pako)
+* data compression
 
 It is only for reading HDF5 files as an ArrayBuffer representation of the file.
 
@@ -12,7 +12,7 @@ See a live [demo](https://ncnr.nist.gov/ncnrdata/view/nexus-hdf-viewer.html?path
 
 ## Dependencies
  * ES6 module support (current versions of Firefox and Chrome work)
- * zlib from https://github.com/nodeca/pako is included in the web_modules directory (via @pika/web)
+ * [pako](https://github.com/nodeca/pako) for zlib on browser
 
 ## Limitations
 * not all datatypes that are supported by pyfive (through numpy) are supported (yet), though dtypes like u8, f4, S12, i4 are supported.
