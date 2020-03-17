@@ -203,26 +203,27 @@ export class File extends Group {
   mode: 'r';
   userblock_size: number;
   _fh: ArrayBufferLike;
+  _superblock: SuperBlock;
 
   constructor (fh: ArrayBufferLike, filename: string = '') {
+
     //""" initalize. """
     //if hasattr(filename, 'read'):
     //    if not hasattr(filename, 'seek'):
     //        raise ValueError(
     //            'File like object must have a seek method')
-    
-    var superblock = new SuperBlock(fh, 0);
-    var offset = superblock.offset_to_dataobjects;
-    var dataobjects = new DataObjects(fh, offset);
+
+    const superblock = new SuperBlock(fh, 0);
+    const offset = superblock.offset_to_dataobjects;
+    const dataobjects = new DataObjects(fh, offset);
     super('/', dataobjects, null);
     this.parent = this;
-
-    this._fh = fh
     this.filename = filename;
-
     this.file = this;
     this.mode = 'r';
     this.userblock_size = 0;
+    this._fh = fh
+    this._superblock = superblock;
   }
 
   _get_object_by_address(obj_addr: number) {
