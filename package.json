@@ -36,10 +36,28 @@
     "tslib": "^1.11.1",
     "typescript": "^3.8.3"
   },
+  "jest": {
+    "moduleFileExtensions": [
+      "ts",
+      "js"
+    ],
+    "transform": {
+      "^.+\\.ts$": "ts-jest"
+    },
+    "globals": {
+      "ts-jest": {
+        "tsConfig": "tsconfig.json"
+      }
+    },
+    "testMatch": [
+      "**/test/**/*.spec.ts"
+    ]
+  },
   "scripts": {
     "build": "rollup -c",
     "demo": "python -m SimpleHTTPServer 8888",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest --coverage",
+    "test:watch": "jest --watch",
     "watch": "rollup -c -w"
   }
 }
