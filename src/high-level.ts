@@ -1,5 +1,5 @@
-import {DataObjects} from './dataobjects';
-import {SuperBlock} from './misc-low-level';
+import { DataObjects } from './dataobjects';
+import { SuperBlock } from './misc-low-level';
 
 export const __version__ = '0.4.0.dev';
 
@@ -19,17 +19,21 @@ export class Group {
   */
   parent: Group;
   file: File;
-  _links: {[key: string]: number};
+  _links: { [key: string]: number };
   _dataobjects: DataObjects;
-  _attrs: {[key: string]: any[]};
+  _attrs: { [key: string]: any[] };
   _keys: string[];
 
-  constructor(public name: string, dataobjects: DataObjects, parent: Group, getterProxy=false) {
+  constructor(
+    public name: string,
+    dataobjects: DataObjects,
+    parent: Group,
+    getterProxy = false
+  ) {
     if (parent == null) {
       this.parent = this;
-      this.file = <unknown>this as File;
-    }
-    else {
+      this.file = (<unknown>this) as File;
+    } else {
       this.parent = parent;
       this.file = parent.file;
     }
@@ -37,7 +41,7 @@ export class Group {
 
     this._links = dataobjects.get_links();
     this._dataobjects = dataobjects;
-    this._attrs = null;  // cached property
+    this._attrs = null; // cached property
     this._keys = null;
     if (getterProxy) {
       return new Proxy(this, groupGetHandler);
@@ -68,12 +72,12 @@ export class Group {
     if (obj == null) {
       throw 'reference not found in file';
     }
-    return obj
+    return obj;
   }
 
   get(y) {
     //""" x.__getitem__(y) <==> x[y] """
-    if (typeof(y) == 'number') {
+    if (typeof y == 'number') {
       return this._dereference(y);
     }
 
@@ -83,8 +87,8 @@ export class Group {
     }
 
     if (path == '.') {
-      return this
-    }    
+      return this;
+    }
     if (/^\//.test(path)) {
       return this.file.get(path.slice(1));
     }
@@ -94,10 +98,9 @@ export class Group {
 
     if (posix_dirname(path) != '') {
       [next_obj, additional_obj] = path.split(/\/(.*)/);
-    }
-    else {
+    } else {
       next_obj = path;
-      additional_obj = '.'
+      additional_obj = '.';
     }
     if (!(next_obj in this._links)) {
       throw next_obj + ' not found in group';
@@ -110,8 +113,7 @@ export class Group {
         throw obj_name + ' is a dataset, not a group';
       }
       return new Dataset(obj_name, dataobjs, this);
-    }
-    else {
+    } else {
       var new_group = new Group(obj_name, dataobjs, this);
       return new_group.get(additional_obj);
     }
@@ -137,7 +139,7 @@ export class Group {
     return that value from the visit method.
     */
     var root_name_length = this.name.length;
-    if (!(/\/$/.test(this.name))) {
+    if (!/\/$/.test(this.name)) {
       root_name_length += 1;
     }
     //queue = deque(this.values())
@@ -148,13 +150,13 @@ export class Group {
       let name = obj.name.slice(root_name_length);
       let ret = func(name, obj);
       if (ret != null) {
-        return ret
+        return ret;
       }
       if (obj instanceof Group) {
         queue = queue.concat(obj.values);
       }
     }
-    return null
+    return null;
   }
 
   get attrs() {
@@ -162,9 +164,8 @@ export class Group {
     if (this._attrs == null) {
       this._attrs = this._dataobjects.get_attributes();
     }
-    return this._attrs
+    return this._attrs;
   }
-
 }
 
 const groupGetHandler = {
@@ -175,7 +176,6 @@ const groupGetHandler = {
     return target.get(prop);
   }
 };
-
 
 export class File extends Group {
   /*
@@ -205,8 +205,7 @@ export class File extends Group {
   _fh: ArrayBufferLike;
   _superblock: SuperBlock;
 
-  constructor (fh: ArrayBufferLike, filename: string = '') {
-
+  constructor(fh: ArrayBufferLike, filename: string = '') {
     //""" initalize. """
     //if hasattr(filename, 'read'):
     //    if not hasattr(filename, 'seek'):
@@ -222,18 +221,18 @@ export class File extends Group {
     this.file = this;
     this.mode = 'r';
     this.userblock_size = 0;
-    this._fh = fh
+    this._fh = fh;
     this._superblock = superblock;
   }
 
   _get_object_by_address(obj_addr: number) {
     //""" Return the object pointed to by a given address. """
     if (this._dataobjects.offset == obj_addr) {
-      return this
+      return this;
     }
-    return this.visititems(
-      (y) => {(y._dataobjects.offset == obj_addr) ? y : null;}
-    );
+    return this.visititems(y => {
+      y._dataobjects.offset == obj_addr ? y : null;
+    });
   }
 }
 
@@ -289,10 +288,10 @@ export class Dataset extends Array {
     //""" initalize. """
     super();
     this.parent = parent;
-    this.file = parent.file
+    this.file = parent.file;
     this.name = name;
 
-    this._dataobjects = dataobjects
+    this._dataobjects = dataobjects;
     this._attrs = null;
     this._astype = null;
   }
@@ -300,7 +299,7 @@ export class Dataset extends Array {
   get value() {
     var data = this._dataobjects.get_data();
     if (this._astype == null) {
-      return data
+      return data;
     }
     // return data.astype(this._astype);
   }
@@ -322,20 +321,19 @@ export class Dataset extends Array {
   }
 }
 
-
 function posix_dirname(p) {
   let sep = '/';
   let i = p.lastIndexOf(sep) + 1;
   let head = p.slice(0, i);
   let all_sep = new RegExp('^' + sep + '+$');
   let end_sep = new RegExp(sep + '$');
-  if (head && !(all_sep.test(head))) {
+  if (head && !all_sep.test(head)) {
     head = head.replace(end_sep, '');
   }
-  return head
+  return head;
 }
 
 function normpath(path) {
-  return path.replace(/\/(\/)+/g, '/'); 
+  return path.replace(/\/(\/)+/g, '/');
   // path = posixpath.normpath(y)
 }
