@@ -14,7 +14,7 @@ module.exports = {
   plugins: [
     resolve(),
     commonjs({include: /node_modules/}),
-    typescript(),
+    typescript({noEmitOnError: false}),
     terser()
   ]
 };
