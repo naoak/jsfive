@@ -1,4 +1,4 @@
-import { _structure_size, _unpack_struct_from } from './core';
+import { structureSize, unpackStructFrom } from './core';
 
 enum DataTypeClass {
   FIXED_POINT = 0,
@@ -21,7 +21,7 @@ const DATATYPE_MSG = new Map([
   ['class_bit_field_2', 'B'],
   ['size', 'I']
 ]);
-const DATATYPE_MSG_SIZE = _structure_size(DATATYPE_MSG);
+const DATATYPE_MSG_SIZE = structureSize(DATATYPE_MSG);
 
 /**
  * HDF5 DataType Message
@@ -35,7 +35,7 @@ export class DataTypeMessage {
   }
 
   private _readDataType(): string | any[] {
-    const msg = _unpack_struct_from(DATATYPE_MSG, this.buf, this.offset);
+    const msg = unpackStructFrom(DATATYPE_MSG, this.buf, this.offset);
     this.offset += DATATYPE_MSG_SIZE;
     const classAndVersion = msg.get('class_and_version');
     const version = classAndVersion >> 4;

@@ -6,13 +6,13 @@ export function assert(thing: any) {
   }
 }
 
-export function _unpack_struct_from<V>(
+export function unpackStructFrom<V>(
   structure: Map<string, V>,
   buf: ArrayBuffer | SharedArrayBuffer,
   offset = 0
 ) {
   const fmt = '<' + Array.from(structure.values()).join('');
-  const values = struct.unpack_from(fmt, buf, offset);
+  const values = struct.unpackFrom(fmt, buf, offset);
   const keys = Array.from(structure.keys());
   const output = new Map<string, any>();
   for (var i = 0; i < keys.length; i++) {
@@ -21,13 +21,13 @@ export function _unpack_struct_from<V>(
   return output;
 }
 
-export function _structure_size(structure: Map<any, any>) {
+export function structureSize(structure: Map<any, any>) {
   //""" Return the size of a structure in bytes. """
   var fmt = '<' + Array.from(structure.values()).join('');
-  return struct.calcsize(fmt);
+  return struct.calcSize(fmt);
 }
 
-export function _padded_size(size: number, padding_multiple = 8) {
+export function paddedSize(size: number, padding_multiple = 8) {
   //""" Return the size of a field padded to be a multiple a given value. """
   return Math.ceil(size / padding_multiple) * padding_multiple;
 }
@@ -39,7 +39,7 @@ const dtype_to_format = {
 };
 
 export function dtype_getter(dtype_str: string): [string, boolean, number] {
-  let big_endian = struct._is_big_endian(dtype_str);
+  let big_endian = struct.isBigEndian(dtype_str);
   let getter: string;
   let nbytes: number;
   if (/S/.test(dtype_str)) {

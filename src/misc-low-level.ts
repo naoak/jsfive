@@ -1,7 +1,7 @@
 import {
-  _structure_size,
-  _padded_size,
-  _unpack_struct_from,
+  structureSize,
+  paddedSize,
+  unpackStructFrom,
   struct,
   assert
 } from './core';
@@ -15,13 +15,13 @@ export class SuperBlock {
   _root_symbol_table: SymbolTable;
 
   constructor(fh: ArrayBufferLike, offset: number) {
-    let version_hint: number = struct.unpack_from('<B', fh, offset + 8)[0];
+    let version_hint: number = struct.unpackFrom('<B', fh, offset + 8)[0];
     let contents: Map<string, any>;
     if (version_hint == 0) {
-      contents = _unpack_struct_from(SUPERBLOCK_V0, fh, offset);
+      contents = unpackStructFrom(SUPERBLOCK_V0, fh, offset);
       this._end_of_sblock = offset + SUPERBLOCK_V0_SIZE;
     } else if (version_hint == 2 || version_hint == 3) {
-      contents = _unpack_struct_from(SUPERBLOCK_V2_V3, fh, offset);
+      contents = unpackStructFrom(SUPERBLOCK_V2_V3, fh, offset);
       this._end_of_sblock = offset + SUPERBLOCK_V2_V3_SIZE;
     } else {
       throw 'unsupported superblock version: ' + version_hint.toFixed();
@@ -65,7 +65,7 @@ export class Heap {
     //""" initalize. """
 
     //fh.seek(offset)
-    let local_heap = _unpack_struct_from(LOCAL_HEAP, fh, offset);
+    let local_heap = unpackStructFrom(LOCAL_HEAP, fh, offset);
     assert(local_heap.get('signature') == 'HEAP');
     assert(local_heap.get('version') == 0);
     let data_offset = local_heap.get('address_of_data_segment');
@@ -82,7 +82,7 @@ export class Heap {
     //""" Return the name of the object indicated by the given offset. """
     let end = new Uint8Array(this.data).indexOf(0, offset);
     let name_size = end - offset;
-    let name = struct.unpack_from(
+    let name = struct.unpackFrom(
       '<' + name_size.toFixed() + 's',
       this.data,
       offset
@@ -109,7 +109,7 @@ export class SymbolTable {
       //# and contains only a single entry
       node = new Map([['symbols', 1]]);
     } else {
-      node = _unpack_struct_from(SYMBOL_TABLE_NODE, fh, offset);
+      node = unpackStructFrom(SYMBOL_TABLE_NODE, fh, offset);
       if (node.get('signature') != 'SNOD') {
         throw 'incorrect node type';
       }
@@ -118,7 +118,7 @@ export class SymbolTable {
     let entries: Map<string, any>[] = [];
     var n_symbols = node.get('symbols');
     for (var i = 0; i < n_symbols; i++) {
-      entries.push(_unpack_struct_from(SYMBOL_TABLE_ENTRY, fh, offset));
+      entries.push(unpackStructFrom(SYMBOL_TABLE_ENTRY, fh, offset));
       offset += SYMBOL_TABLE_ENTRY_SIZE;
     }
     if (root) {
@@ -156,7 +156,7 @@ export class GlobalHeap {
   _objects: Map<number, ArrayBuffer>;
 
   constructor(fh: ArrayBufferLike, offset: number) {
-    let header = _unpack_struct_from(GLOBAL_HEAP_HEADER, fh, offset);
+    let header = unpackStructFrom(GLOBAL_HEAP_HEADER, fh, offset);
     offset += GLOBAL_HEAP_HEADER_SIZE;
     //assert(header.get('signature') == 'GCOL');
     //assert(header.get('version') == 1);
@@ -176,11 +176,7 @@ export class GlobalHeap {
       this._objects = new Map();
       let offset = 0;
       while (offset <= this.heap_data.byteLength - GLOBAL_HEAP_OBJECT_SIZE) {
-        let info = _unpack_struct_from(
-          GLOBAL_HEAP_OBJECT,
-          this.heap_data,
-          offset
-        );
+        let info = unpackStructFrom(GLOBAL_HEAP_OBJECT, this.heap_data, offset);
         if (info.get('object_index') == 0) {
           break;
         }
@@ -190,14 +186,14 @@ export class GlobalHeap {
           offset + info.get('object_size')
         );
         this._objects.set(info.get('object_index'), obj_data);
-        offset += _padded_size(info.get('object_size'));
+        offset += paddedSize(info.get('object_size'));
       }
     }
     return this._objects;
   }
 }
 
-var FORMAT_SIGNATURE = struct.unpack_from(
+var FORMAT_SIGNATURE = struct.unpackFrom(
   '8s',
   new Uint8Array([137, 72, 68, 70, 13, 10, 26, 10]).buffer
 )[0];
@@ -226,7 +222,7 @@ var SUPERBLOCK_V0 = new Map([
   ['end_of_file_address', 'Q'],
   ['driver_information_address', 'Q'] // assume 8 byte addressing
 ]);
-var SUPERBLOCK_V0_SIZE = _structure_size(SUPERBLOCK_V0);
+var SUPERBLOCK_V0_SIZE = structureSize(SUPERBLOCK_V0);
 
 var SUPERBLOCK_V2_V3 = new Map([
   ['format_signature', '8s'],
@@ -243,7 +239,7 @@ var SUPERBLOCK_V2_V3 = new Map([
 
   ['superblock_checksum', 'I']
 ]);
-var SUPERBLOCK_V2_V3_SIZE = _structure_size(SUPERBLOCK_V2_V3);
+var SUPERBLOCK_V2_V3_SIZE = structureSize(SUPERBLOCK_V2_V3);
 
 var SYMBOL_TABLE_ENTRY = new Map([
   ['link_name_offset', 'Q'], // 8 byte address
@@ -252,7 +248,7 @@ var SYMBOL_TABLE_ENTRY = new Map([
   ['reserved', 'I'],
   ['scratch', '16s']
 ]);
-var SYMBOL_TABLE_ENTRY_SIZE = _structure_size(SYMBOL_TABLE_ENTRY);
+var SYMBOL_TABLE_ENTRY_SIZE = structureSize(SYMBOL_TABLE_ENTRY);
 
 var SYMBOL_TABLE_NODE = new Map([
   ['signature', '4s'],
@@ -260,7 +256,7 @@ var SYMBOL_TABLE_NODE = new Map([
   ['reserved_0', 'B'],
   ['symbols', 'H']
 ]);
-var SYMBOL_TABLE_NODE_SIZE = _structure_size(SYMBOL_TABLE_NODE);
+var SYMBOL_TABLE_NODE_SIZE = structureSize(SYMBOL_TABLE_NODE);
 
 // III.D Disk Format: Level 1D - Local Heaps
 var LOCAL_HEAP = new Map([
@@ -279,7 +275,7 @@ var GLOBAL_HEAP_HEADER = new Map([
   ['reserved', '3s'],
   ['collection_size', 'Q']
 ]);
-var GLOBAL_HEAP_HEADER_SIZE = _structure_size(GLOBAL_HEAP_HEADER);
+var GLOBAL_HEAP_HEADER_SIZE = structureSize(GLOBAL_HEAP_HEADER);
 
 var GLOBAL_HEAP_OBJECT = new Map([
   ['object_index', 'H'],
@@ -287,4 +283,4 @@ var GLOBAL_HEAP_OBJECT = new Map([
   ['reserved', 'I'],
   ['object_size', 'Q'] // 8 byte addressing,
 ]);
-var GLOBAL_HEAP_OBJECT_SIZE = _structure_size(GLOBAL_HEAP_OBJECT);
+var GLOBAL_HEAP_OBJECT_SIZE = structureSize(GLOBAL_HEAP_OBJECT);

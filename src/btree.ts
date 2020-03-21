@@ -1,6 +1,6 @@
 import {
-  _unpack_struct_from,
-  _structure_size,
+  unpackStructFrom,
+  structureSize,
   struct,
   dtype_getter,
   DataView64
@@ -51,26 +51,22 @@ export class BTree {
   _read_node(offset: number) {
     //""" Return a single node in the B-Tree located at a given offset. """
     //this.fh.seek(offset);
-    let node = _unpack_struct_from(B_LINK_NODE_V1, this.fh, offset);
-    offset += _structure_size(B_LINK_NODE_V1);
+    let node = unpackStructFrom(B_LINK_NODE_V1, this.fh, offset);
+    offset += structureSize(B_LINK_NODE_V1);
     //assert node['signature'] == b'TREE'
     var keys = [];
     var addresses = [];
     var entries_used = node.get('entries_used');
     for (var i = 0; i < entries_used; i++) {
-      let [key, key_higher] = struct.unpack_from('<II', this.fh, offset);
+      let [key, key_higher] = struct.unpackFrom('<II', this.fh, offset);
       offset += 8;
-      let [address, address_higher] = struct.unpack_from(
-        '<II',
-        this.fh,
-        offset
-      );
+      let [address, address_higher] = struct.unpackFrom('<II', this.fh, offset);
       offset += 8;
       keys.push(key);
       addresses.push(address);
     }
     //# N+1 key
-    keys.push(struct.unpack_from('<I', this.fh, offset)[0]);
+    keys.push(struct.unpackFrom('<I', this.fh, offset)[0]);
     node.set('keys', keys);
     node.set('addresses', addresses);
     return node;
@@ -125,8 +121,8 @@ export class BTreeRawDataChunks {
   _read_node(offset) {
     //""" Return a single node in the b-tree located at a give offset. """
     //self.fh.seek(offset)
-    let node = _unpack_struct_from(B_LINK_NODE_V1, this.fh, offset);
-    offset += _structure_size(B_LINK_NODE_V1);
+    let node = unpackStructFrom(B_LINK_NODE_V1, this.fh, offset);
+    offset += structureSize(B_LINK_NODE_V1);
     //assert node['signature'] == b'TREE'
     //assert node['node_type'] == 1
 
@@ -134,18 +130,14 @@ export class BTreeRawDataChunks {
     var addresses = [];
     let entries_used = node.get('entries_used');
     for (var i = 0; i < entries_used; i++) {
-      let [chunk_size, filter_mask] = struct.unpack_from(
-        '<II',
-        this.fh,
-        offset
-      );
+      let [chunk_size, filter_mask] = struct.unpackFrom('<II', this.fh, offset);
       offset += 8;
       let fmt = '<' + this.dims.toFixed() + 'Q';
-      let fmt_size = struct.calcsize(fmt);
-      let chunk_offset = struct.unpack_from(fmt, this.fh, offset);
+      let fmt_size = struct.calcSize(fmt);
+      let chunk_offset = struct.unpackFrom(fmt, this.fh, offset);
       //console.log(struct.unpack_from('<8B', this.fh, offset));
       offset += fmt_size;
-      let chunk_address = struct.unpack_from('<Q', this.fh, offset)[0];
+      let chunk_address = struct.unpackFrom('<Q', this.fh, offset)[0];
       offset += 8;
 
       keys.push(
@@ -393,7 +385,7 @@ function _verify_fletcher32(chunk_buffer) {
   }
 
   //# extract stored checksums
-  var [ref_sum1, ref_sum2] = struct.unpack_from(
+  var [ref_sum1, ref_sum2] = struct.unpackFrom(
     '>HH',
     chunk_buffer,
     data_length
