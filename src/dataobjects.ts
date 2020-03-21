@@ -1,4 +1,4 @@
-import { DatatypeMessage } from './datatype-msg';
+import { DataTypeMessage } from './datatype';
 import {
   _structure_size,
   _padded_size,
@@ -63,7 +63,7 @@ export class DataObjects {
     //""" Datatype of the dataset. """
     let msg = this.find_msg_type(DATATYPE_MSG_TYPE)[0];
     let msg_offset = msg.get('offset_to_message');
-    return new DatatypeMessage(this.fh, msg_offset).dtype;
+    return new DataTypeMessage(this.fh, msg_offset).dtype;
   }
 
   get chunks() {
@@ -223,7 +223,7 @@ export class DataObjects {
     //# read in the datatype information
     var dtype;
     try {
-      dtype = new DatatypeMessage(this.fh, offset).dtype;
+      dtype = new DataTypeMessage(this.fh, offset).dtype;
     } catch (e) {
       console.log('Attribute ' + name + ' type not implemented, set to null.');
       return [name, null];
