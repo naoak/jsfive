@@ -56,7 +56,7 @@
   "scripts": {
     "build": "rollup -c",
     "demo": "python -m SimpleHTTPServer 8888",
-    "test": "jest --verbose --coverage",
+    "test": "jest --verbose --silent --coverage",
     "test:watch": "jest --verbose --watch",
     "watch": "rollup -c -w"
   }
