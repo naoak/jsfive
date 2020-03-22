@@ -321,20 +321,27 @@ describe('DataView64', () => {
       for (let i = 0; i < 8; i++) {
         buf[i] = text.charCodeAt(i);
       }
-      expect(view.getString(0, false, 8)).toBe(text);
-      expect(view.getString(0, true, 8)).toBe(text);
+      expect(view.getString(0, 8)).toBe(text);
+    });
+  });
+
+  describe('setString()', () => {
+    test('should store ascii string', () => {
+      const text = 'abcdefgh';
+      const buf = new Uint8Array(8);
+      const view = new DataView64(buf.buffer);
+      const len = view.setString(0, text);
+      expect(len).toBe(8);
+      expect(view.getString(0, len)).toBe(text);
     });
 
-    test('should ignore zero char', () => {
-      const text = 'abcdefgh';
-      const buf = new Uint8Array(9);
+    test('should store utf-8 string', () => {
+      const text = 'こんにちは';
+      const buf = new Uint8Array(100);
       const view = new DataView64(buf.buffer);
-      for (let i = 0; i < 8; i++) {
-        buf[i] = text.charCodeAt(i);
-      }
-      buf[8] = 0;
-      expect(view.getString(0, false, 9)).toBe(text);
-      expect(view.getString(0, true, 9)).toBe(text);
+      const len = view.setString(0, text);
+      expect(len).toBe(15);
+      expect(view.getString(0, len)).toBe(text);
     });
   });
 

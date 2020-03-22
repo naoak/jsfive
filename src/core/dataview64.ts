@@ -1,3 +1,5 @@
+import { TextDecoder, TextEncoder } from 'util';
+
 export interface DataView64Options {
   // The length (in bytes) of this view from the start of its ArrayBuffer.
   // Fixed at construction time and thus read only.
@@ -114,16 +116,31 @@ export class DataView64 extends DataView {
     }
   }
 
-  getString(byteOffset: number, _littleEndian: boolean, length: number) {
-    let output = '';
-    for (var i = 0; i < length; i++) {
-      const c = this.getUint8(byteOffset + i);
-      // filter out zero character codes (padding)
-      if (c) {
-        output += String.fromCharCode(c);
-      }
+  /**
+   * Get string from buffer
+   * @param byteOffset
+   * @param length
+   */
+  getString(byteOffset: number, length: number) {
+    const decoder = new TextDecoder();
+    const textBuffer = this.buffer.slice(byteOffset, length);
+    return decoder.decode(textBuffer);
+  }
+
+  /**
+   * Stores a string at the specified byte offset from the start of the view.
+   * @param byteOffset
+   * @param text
+   * @return text buffer length
+   */
+  setString(byteOffset: number, text: string): number {
+    const encoder = new TextEncoder();
+    const buf = encoder.encode(text);
+    const length = buf.length;
+    for (let i = 0; i < length; i++) {
+      this.setUint8(byteOffset + i, buf[i]);
     }
-    return decodeURIComponent(escape(output));
+    return length;
   }
 
   /**

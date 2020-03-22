@@ -92,8 +92,10 @@ class Struct {
     buffer: ArrayBuffer | SharedArrayBuffer,
     offset: number = 0
   ) {
-    const view = new DataView64(buffer);
-    const bigEndian = this.isBigEndian(fmt);
+    const view = new DataView64(buffer, {
+      byteOffset: offset
+    });
+    const littleEndian = !this.isBigEndian(fmt);
     let match: RegExpExecArray;
     const regex = new RegExp(this.reFmtSize, 'g');
     const output = [];
@@ -102,23 +104,14 @@ class Struct {
       const f = match[2] as StructGetterKey;
       const getter = this.structGetters[f];
       const size = this.structByteLengths[f];
-      var append_target;
-      if (f == 's') {
-        var sarray = new Array();
-        append_target = sarray;
+      if (f === 's') {
+        output.push(view.getString(offset, n * size));
+        offset += n * size;
       } else {
-        append_target = output;
-      }
-      for (let i = 0; i < n; i++) {
-        append_target.push(view[getter](offset, !bigEndian));
-        offset += size;
-      }
-      if (f == 's') {
-        output.push(
-          sarray.reduce(function(a, b) {
-            return a + String.fromCharCode(b);
-          }, '')
-        );
+        for (let i = 0; i < n; i++) {
+          output.push(view[getter](offset, littleEndian));
+          offset += size;
+        }
       }
     }
     return output;
