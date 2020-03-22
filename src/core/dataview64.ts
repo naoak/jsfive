@@ -21,6 +21,29 @@ export class DataView64 extends DataView {
   }
 
   /**
+   * Stores an Uint64 value at the specified byte offset from the start of the view.
+   * @param byteOffset
+   * @param value
+   * @param littleEndian
+   */
+  setUint64(byteOffset: number, value: number, littleEndian?: boolean) {
+    if (WARN_OVERFLOW && !Number.isSafeInteger(value)) {
+      console.warn(value, 'exceeds MAX_SAFE_INTEGER. Precision may be lost');
+    }
+    let low: number = value & 0x00000000ffffffff;
+    low = low < 0 ? 0x100000000 + low : low;
+    const high: number = (value - low) / 2 ** 32;
+
+    if (littleEndian) {
+      this.setUint32(byteOffset, low, true);
+      this.setUint32(byteOffset + 4, high, true);
+    } else {
+      this.setUint32(byteOffset, high, false);
+      this.setUint32(byteOffset + 4, low, false);
+    }
+  }
+
+  /**
    * Get Int64 value by splitting 64-bit number into two 32-bit (4-byte) parts
    * (untested!!)
    * @param byteOffset
@@ -47,6 +70,30 @@ export class DataView64 extends DataView {
       );
     }
     return combined;
+  }
+
+  /**
+   * Stores an Int64 value at the specified byte offset from the start of the view.
+   * @param byteOffset
+   * @param value
+   * @param littleEndian
+   */
+  setInt64(byteOffset: number, value: number, littleEndian?: boolean) {
+    if (WARN_OVERFLOW && !Number.isSafeInteger(value)) {
+      console.warn(value, 'exceeds MAX_SAFE_INTEGER. Precision may be lost');
+    }
+
+    let low: number = value & 0x00000000ffffffff;
+    low = low < 0 ? 0x100000000 + low : low;
+    const high: number = (value - low) / 2 ** 32;
+
+    if (littleEndian) {
+      this.setInt32(byteOffset, low, true);
+      this.setInt32(byteOffset + 4, high, true);
+    } else {
+      this.setInt32(byteOffset, high, false);
+      this.setUint32(byteOffset + 4, low, false);
+    }
   }
 
   getString(byteOffset: number, _littleEndian: boolean, length: number) {
