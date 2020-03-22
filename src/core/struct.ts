@@ -92,7 +92,7 @@ class Struct {
     buffer: ArrayBuffer | SharedArrayBuffer,
     offset: number = 0
   ) {
-    const view = new DataView64(buffer, 0);
+    const view = new DataView64(buffer);
     const bigEndian = this.isBigEndian(fmt);
     let match: RegExpExecArray;
     const regex = new RegExp(this.reFmtSize, 'g');

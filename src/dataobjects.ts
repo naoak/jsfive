@@ -308,7 +308,7 @@ export class DataObjects {
       }
     } else {
       let [getter, big_endian, size] = dtype_getter(dtype);
-      let view = new DataView64(buf, 0);
+      let view = new DataView64(buf);
       for (var i = 0; i < count; i++) {
         value[i] = view[getter](offset, !big_endian, size);
         offset += size;

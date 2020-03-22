@@ -1,6 +1,24 @@
-const WARN_OVERFLOW = true;
+export interface DataView64Options {
+  // The length (in bytes) of this view from the start of its ArrayBuffer.
+  // Fixed at construction time and thus read only.
+  readonly byteOffset?: number;
+
+  // The offset (in bytes) of this view from the start of its ArrayBuffer.
+  // Fixed at construction time and thus read only.
+  readonly byteLength?: number;
+
+  // If true, warn 64bit integer value when it is not safe integer
+  readonly warnOverflow?: boolean;
+}
 
 export class DataView64 extends DataView {
+  warnOverflow: boolean;
+
+  constructor(buffer: ArrayBufferLike, options: DataView64Options = {}) {
+    super(buffer, options.byteOffset, options.byteLength);
+    this.warnOverflow = !!options.warnOverflow;
+  }
+
   /**
    * Get Uint64 value by splitting 64-bit number into two 32-bit (4-byte) parts
    * @param byteOffset
@@ -14,7 +32,7 @@ export class DataView64 extends DataView {
       ? left + 2 ** 32 * right
       : 2 ** 32 * left + right;
 
-    if (WARN_OVERFLOW && !Number.isSafeInteger(combined)) {
+    if (this.warnOverflow && !Number.isSafeInteger(combined)) {
       console.warn(combined, 'exceeds MAX_SAFE_INTEGER. Precision may be lost');
     }
     return combined;
@@ -27,7 +45,7 @@ export class DataView64 extends DataView {
    * @param littleEndian
    */
   setUint64(byteOffset: number, value: number, littleEndian?: boolean) {
-    if (WARN_OVERFLOW && !Number.isSafeInteger(value)) {
+    if (this.warnOverflow && !Number.isSafeInteger(value)) {
       console.warn(value, 'exceeds MAX_SAFE_INTEGER. Precision may be lost');
     }
     let low: number = value & 0x00000000ffffffff;
@@ -63,7 +81,7 @@ export class DataView64 extends DataView {
 
     const combined = low + high * 2 ** 32;
 
-    if (WARN_OVERFLOW && !Number.isSafeInteger(combined)) {
+    if (this.warnOverflow && !Number.isSafeInteger(combined)) {
       console.warn(
         combined,
         'exceeds MAX_SAFE_INTEGER or MIN_SAFE_INTEGER. Precision may be lost'
@@ -79,7 +97,7 @@ export class DataView64 extends DataView {
    * @param littleEndian
    */
   setInt64(byteOffset: number, value: number, littleEndian?: boolean) {
-    if (WARN_OVERFLOW && !Number.isSafeInteger(value)) {
+    if (this.warnOverflow && !Number.isSafeInteger(value)) {
       console.warn(value, 'exceeds MAX_SAFE_INTEGER. Precision may be lost');
     }
 

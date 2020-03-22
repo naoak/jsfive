@@ -4,7 +4,7 @@ describe('DataView64', () => {
   describe('getUint64()', () => {
     test('should get an Uint64 (little endian)', () => {
       const buf = new Uint8Array(8);
-      const view = new DataView64(buf.buffer, 0);
+      const view = new DataView64(buf.buffer, { warnOverflow: true });
       expect(view.getUint64(0, true)).toBe(0);
       buf[0] = 0xff;
       buf[1] = 0x00;
@@ -38,7 +38,7 @@ describe('DataView64', () => {
 
     test('should get an Uint64 value from array buffer (big endian)', () => {
       const buf = new Uint8Array(8);
-      const view = new DataView64(buf.buffer, 0);
+      const view = new DataView64(buf.buffer, { warnOverflow: true });
       expect(view.getUint64(0, false)).toBe(0);
       buf[7] = 0xff;
       buf[6] = 0x00;
@@ -74,7 +74,7 @@ describe('DataView64', () => {
   describe('setUint64()', () => {
     test('should store an Uint64 (little endian)', () => {
       const buf = new Uint8Array(8);
-      const view = new DataView64(buf.buffer, 0);
+      const view = new DataView64(buf.buffer, { warnOverflow: true });
       view.setUint64(0, 255, true);
       expect(view.getUint64(0, true)).toBe(255);
       view.setUint64(0, Number.MAX_SAFE_INTEGER, true);
@@ -87,7 +87,7 @@ describe('DataView64', () => {
 
     test('should store an Uint64 (big endian).', () => {
       const buf = new Uint8Array(8);
-      const view = new DataView64(buf.buffer, 0);
+      const view = new DataView64(buf.buffer, { warnOverflow: true });
       view.setUint64(0, 255, false);
       expect(view.getUint64(0, false)).toBe(255);
       view.setUint64(0, Number.MAX_SAFE_INTEGER, false);
@@ -102,7 +102,7 @@ describe('DataView64', () => {
   describe('getInt64()', () => {
     test('should get an Uint64 value (little endian, positive)', () => {
       const buf = new Uint8Array(8);
-      const view = new DataView64(buf.buffer, 0);
+      const view = new DataView64(buf.buffer, { warnOverflow: true });
       expect(view.getUint64(0, true)).toBe(0);
       buf[0] = 0xff;
       buf[1] = 0x00;
@@ -136,7 +136,7 @@ describe('DataView64', () => {
 
     test('should get an Int64 value (little endian, negative)', () => {
       const buf = new Uint8Array(8);
-      const view = new DataView64(buf.buffer, 0);
+      const view = new DataView64(buf.buffer, { warnOverflow: true });
       expect(view.getInt64(0, true)).toBe(0);
       buf[0] = 0xff;
       buf[1] = 0xff;
@@ -179,7 +179,7 @@ describe('DataView64', () => {
 
     test('should get an Uint64 value (big endian, positive)', () => {
       const buf = new Uint8Array(8);
-      const view = new DataView64(buf.buffer, 0);
+      const view = new DataView64(buf.buffer, { warnOverflow: true });
       expect(view.getUint64(0, false)).toBe(0);
       buf[7] = 0xff;
       buf[6] = 0x00;
@@ -213,7 +213,7 @@ describe('DataView64', () => {
 
     test('should get an Int64 value (big endian, negative)', () => {
       const buf = new Uint8Array(8);
-      const view = new DataView64(buf.buffer, 0);
+      const view = new DataView64(buf.buffer, { warnOverflow: true });
       expect(view.getInt64(0, false)).toBe(0);
       buf[7] = 0xff;
       buf[6] = 0xff;
@@ -258,7 +258,7 @@ describe('DataView64', () => {
   describe('setInt64()', () => {
     test('should store an Int64 value (little endian, positive)', () => {
       const buf = new Uint8Array(8);
-      const view = new DataView64(buf.buffer, 0);
+      const view = new DataView64(buf.buffer, { warnOverflow: true });
       view.setInt64(0, 255, true);
       expect(view.getUint64(0, true)).toBe(255);
       view.setInt64(0, Number.MAX_SAFE_INTEGER, true);
@@ -271,7 +271,7 @@ describe('DataView64', () => {
 
     test('should store an Int64 value (little endian, negative).', () => {
       const buf = new Uint8Array(8);
-      const view = new DataView64(buf.buffer, 0);
+      const view = new DataView64(buf.buffer, { warnOverflow: true });
       view.setInt64(0, -1, true);
       expect(view.getInt64(0, true)).toBe(-1);
       view.setInt64(0, -256, true);
@@ -286,7 +286,7 @@ describe('DataView64', () => {
 
     test('should store an Int64 value (big endian, positive).', () => {
       const buf = new Uint8Array(8);
-      const view = new DataView64(buf.buffer, 0);
+      const view = new DataView64(buf.buffer, { warnOverflow: true });
       view.setInt64(0, 255, false);
       expect(view.getUint64(0, false)).toBe(255);
       view.setInt64(0, Number.MAX_SAFE_INTEGER, false);
@@ -299,7 +299,7 @@ describe('DataView64', () => {
 
     test('should store an Int64 value (big endian, negative)', () => {
       const buf = new Uint8Array(8);
-      const view = new DataView64(buf.buffer, 0);
+      const view = new DataView64(buf.buffer, { warnOverflow: true });
       view.setInt64(0, -1, false);
       expect(view.getInt64(0, false)).toBe(-1);
       view.setInt64(0, -256, false);
@@ -317,7 +317,7 @@ describe('DataView64', () => {
     test('should get string from array buffer', () => {
       const text = 'abcdefgh';
       const buf = new Uint8Array(8);
-      const view = new DataView64(buf.buffer, 0);
+      const view = new DataView64(buf.buffer);
       for (let i = 0; i < 8; i++) {
         buf[i] = text.charCodeAt(i);
       }
@@ -328,7 +328,7 @@ describe('DataView64', () => {
     test('should ignore zero char', () => {
       const text = 'abcdefgh';
       const buf = new Uint8Array(9);
-      const view = new DataView64(buf.buffer, 0);
+      const view = new DataView64(buf.buffer);
       for (let i = 0; i < 8; i++) {
         buf[i] = text.charCodeAt(i);
       }
@@ -341,7 +341,7 @@ describe('DataView64', () => {
   describe('getVLENString()', () => {
     test('should get the addressing information for VLEN data (little endian)', () => {
       const buf = new Uint8Array(16);
-      const view = new DataView64(buf.buffer, 0);
+      const view = new DataView64(buf.buffer);
       view.setUint32(0, 1, false);
       view.setUint64(4, 2, false);
       view.setUint32(12, 3, false);
@@ -350,7 +350,7 @@ describe('DataView64', () => {
 
     test('should get the addressing information for VLEN data (big endian)', () => {
       const buf = new Uint8Array(16);
-      const view = new DataView64(buf.buffer, 0);
+      const view = new DataView64(buf.buffer);
       view.setUint32(0, 1, true);
       view.setUint64(4, 2, true);
       view.setUint32(12, 3, true);
